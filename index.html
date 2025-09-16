@@ -175,12 +175,10 @@
     </div>
 
     <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, collection, addDoc, onSnapshot, query, getDocs, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-        import { setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        setLogLevel('debug');
-        
+        import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { collection, addDoc, onSnapshot, query, getDocs, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { db, auth, appId, initialAuthToken } from './firebase-config.js';
+
         const parseMarkdown = (markdownText) => {
             const lines = markdownText.split('\n');
             let html = '';
@@ -279,12 +277,6 @@
 
             return cleanedText.trim();
         };
-
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
-        const app = initializeApp(firebaseConfig);
-        const db = getFirestore(app);
-        const auth = getAuth(app);
         
         let savedDescriptionsCollection = null;
         let lastGeneratedText = '';
@@ -364,14 +356,12 @@
 
         // 處理拖曳進入事件
         const highlight = (e) => {
-            mainDropArea.classList.add('drag-over');
-            elementDropArea.classList.add('drag-over');
+            e.currentTarget.classList.add('drag-over');
         };
 
         // 處理拖曳離開事件
         const unhighlight = (e) => {
-            mainDropArea.classList.remove('drag-over');
-            elementDropArea.classList.remove('drag-over');
+            e.currentTarget.classList.remove('drag-over');
         };
 
         // 處理檔案放置
@@ -455,9 +445,7 @@
 
             } else {
                 // 使用者未登入，執行匿名登入
-                await signInAnonymously(auth).catch((error) => {
-                    console.error("匿名登入失敗:", error);
-                });
+                console.error("匿名登入邏輯已移至 firebase-config.js 中。");
             }
         });
 
@@ -601,18 +589,6 @@
 
         generateBtn.addEventListener('click', generateCharacter);
         regenerateBtn.addEventListener('click', generateCharacter);
-
-        // 匿名登入
-        if (typeof __initial_auth_token !== 'undefined') {
-            await signInWithCustomToken(auth, __initial_auth_token).catch((error) => {
-                console.error("客製化令牌登入失敗:", error);
-            });
-        } else {
-            await signInAnonymously(auth).catch((error) => {
-                console.error("匿名登入失敗:", error);
-            });
-        }
-
         updateButtonState();
 
     </script>
