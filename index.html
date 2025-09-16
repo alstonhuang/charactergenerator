@@ -175,9 +175,40 @@
     </div>
 
     <script type="module">
-        import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { collection, addDoc, onSnapshot, query, getDocs, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-        import { db, auth, appId, initialAuthToken } from './firebase-config.js';
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, setLogLevel, collection, addDoc, onSnapshot, query, getDocs, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        
+        // 啟用 Firestore 偵錯日誌以查看詳細資訊
+        setLogLevel('debug');
+
+        // 從全域變數中取得 Firebase 配置和認證 Token
+        const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+
+        // 初始化 Firebase 應用程式
+        const app = initializeApp(firebaseConfig);
+
+        // 匯出認證和 Firestore 實例
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        // 使用提供的 token 登入，或作為匿名使用者登入
+        // 這段邏輯在應用程式啟動時只會執行一次
+        if (initialAuthToken) {
+            signInWithCustomToken(auth, initialAuthToken).catch(error => {
+                console.error("使用自訂 token 登入失敗:", error);
+                // 如果自訂 token 失敗，仍嘗試匿名登入
+                signInAnonymously(auth).catch(anonError => {
+                    console.error("匿名登入失敗:", anonError);
+                });
+            });
+        } else {
+            signInAnonymously(auth).catch(error => {
+                console.error("匿名登入失敗:", error);
+            });
+        }
 
         const parseMarkdown = (markdownText) => {
             const lines = markdownText.split('\n');
@@ -444,8 +475,8 @@
                 });
 
             } else {
-                // 使用者未登入，執行匿名登入
-                console.error("匿名登入邏輯已移至 firebase-config.js 中。");
+                // 使用者未登入，但初始化邏輯已在 firebase-config.js 中處理
+                // 我們等待認證狀態改變，所以這裡不需要任何操作
             }
         });
 
@@ -573,6 +604,7 @@
                     }
                 } else {
                     console.error("API 回應中未找到圖片部分。");
+                    imageOutputArea.innerHTML = `<p class="text-red-500 text-center">很抱歉，AI 暫時無法根據您提供的圖片組合生成圖像。請嘗試重新產生。</p>`;
                 }
 
             } catch (error) {
@@ -583,6 +615,7 @@
             } finally {
                 loadingIndicator.classList.add('hidden');
                 generateBtn.disabled = false;
+                regenerateBtn.classList.remove('hidden'); // 確保重新產生按鈕在完成後顯示
                 regenerateBtn.disabled = false;
             }
         };
