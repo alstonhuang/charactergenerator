@@ -187,27 +187,58 @@
         const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
 
-        // 初始化 Firebase 應用程式
-        const app = initializeApp(firebaseConfig);
+        let app = null;
+        let auth = null;
+        let db = null;
+        let savedDescriptionsCollection = null;
+        let lastGeneratedText = '';
 
-        // 匯出認證和 Firestore 實例
-        const auth = getAuth(app);
-        const db = getFirestore(app);
+        // 檢查 firebaseConfig 是否有效，並嘗試初始化 Firebase
+        if (Object.keys(firebaseConfig).length > 0) {
+            try {
+                app = initializeApp(firebaseConfig);
+                auth = getAuth(app);
+                db = getFirestore(app);
+                
+                // 使用提供的 token 登入，或作為匿名使用者登入
+                if (initialAuthToken) {
+                    signInWithCustomToken(auth, initialAuthToken).catch(error => {
+                        console.error("使用自訂 token 登入失敗:", error);
+                        // 如果自訂 token 失敗，仍嘗試匿名登入
+                        signInAnonymously(auth).catch(anonError => {
+                            console.error("匿名登入失敗:", anonError);
+                        });
+                    });
+                } else {
+                    signInAnonymously(auth).catch(error => {
+                        console.error("匿名登入失敗:", error);
+                    });
+                }
 
-        // 使用提供的 token 登入，或作為匿名使用者登入
-        // 這段邏輯在應用程式啟動時只會執行一次
-        if (initialAuthToken) {
-            signInWithCustomToken(auth, initialAuthToken).catch(error => {
-                console.error("使用自訂 token 登入失敗:", error);
-                // 如果自訂 token 失敗，仍嘗試匿名登入
-                signInAnonymously(auth).catch(anonError => {
-                    console.error("匿名登入失敗:", anonError);
+                // 監聽 Firebase 認證狀態的變化
+                onAuthStateChanged(auth, async (user) => {
+                    if (user) {
+                        const userId = user.uid;
+                        document.getElementById('user-id').textContent = userId;
+                        savedDescriptionsCollection = collection(db, `artifacts/${appId}/users/${userId}/savedDescriptions`);
+                        loadSavedDescriptions();
+
+                        // 啟用並註冊 Firebase 相關的事件監聽器
+                        saveDescriptionBtn.addEventListener('click', saveDescription);
+                        clearSavedBtn.addEventListener('click', clearSavedDescriptions);
+                    } else {
+                        document.getElementById('user-id').textContent = '未連線到 Firebase';
+                        console.warn('Firebase 認證狀態：未連線');
+                    }
                 });
-            });
+
+            } catch (error) {
+                console.error("Firebase 初始化失敗。儲存與載入功能將無法使用。", error);
+                document.getElementById('user-id').textContent = '連線失敗';
+            }
         } else {
-            signInAnonymously(auth).catch(error => {
-                console.error("匿名登入失敗:", error);
-            });
+            console.warn("Firebase 配置缺失。儲存與載入功能將無法使用。");
+            document.getElementById('user-id').textContent = '配置缺失';
         }
 
         const parseMarkdown = (markdownText) => {
@@ -308,10 +339,56 @@
 
             return cleanedText.trim();
         };
-        
-        let savedDescriptionsCollection = null;
-        let lastGeneratedText = '';
 
+        const saveDescription = async () => {
+            if (!savedDescriptionsCollection || !lastGeneratedText) {
+                console.error("無法儲存：Firestore 集合或描述尚未準備好。");
+                return;
+            }
+            try {
+                await addDoc(savedDescriptionsCollection, {
+                    description: lastGeneratedText,
+                    timestamp: new Date().toISOString()
+                });
+                saveDescriptionContainer.classList.add('hidden');
+            } catch (error) {
+                console.error("儲存描述時發生錯誤：", error);
+            }
+        };
+
+        const clearSavedDescriptions = async () => {
+            if (!savedDescriptionsCollection) {
+                console.error("Firestore 集合尚未準備好。");
+                return;
+            }
+            try {
+                const q = query(savedDescriptionsCollection);
+                const querySnapshot = await getDocs(q);
+                querySnapshot.forEach(async (docRef) => {
+                    await deleteDoc(doc(savedDescriptionsCollection, docRef.id));
+                });
+            } catch (error) {
+                 console.error("清除描述時發生錯誤：", error);
+            }
+        };
+
+        const loadSavedDescriptions = () => {
+            if (!savedDescriptionsCollection) {
+                console.error("無法載入描述：Firestore 集合尚未準備好。");
+                return;
+            }
+            onSnapshot(query(savedDescriptionsCollection), (querySnapshot) => {
+                savedDescriptionsContainer.innerHTML = '';
+                querySnapshot.forEach((doc) => {
+                    const data = doc.data();
+                    const descriptionDiv = document.createElement('div');
+                    descriptionDiv.className = 'bg-gray-100 p-4 rounded-md shadow-sm';
+                    descriptionDiv.innerHTML = parseMarkdown(cleanGeneratedText(data.description));
+                    savedDescriptionsContainer.appendChild(descriptionDiv);
+                });
+            });
+        };
+        
         // HTML 元素
         const mainImageUpload = document.getElementById('main-image-upload');
         const elementImageUpload = document.getElementById('element-image-upload');
@@ -429,74 +506,7 @@
         });
         mainDropArea.addEventListener('drop', handleDrop, false);
         elementDropArea.addEventListener('drop', handleDrop, false);
-
-        // 監聽 Firebase 認證狀態的變化
-        onAuthStateChanged(auth, async (user) => {
-            if (user) {
-                // 使用者已登入 (匿名或實名)
-                const userId = user.uid;
-                document.getElementById('user-id').textContent = userId;
-                
-                savedDescriptionsCollection = collection(db, `artifacts/${appId}/users/${userId}/savedDescriptions`);
-                
-                loadSavedDescriptions();
-
-                // 將 Firestore 相關的事件監聽器放在這裡
-                saveDescriptionBtn.addEventListener('click', async () => {
-                    if (!savedDescriptionsCollection || !lastGeneratedText) {
-                        console.error("無法儲存：Firestore 集合或描述尚未準備好。");
-                        return;
-                    }
-                    try {
-                        await addDoc(savedDescriptionsCollection, {
-                            description: lastGeneratedText,
-                            timestamp: new Date().toISOString()
-                        });
-                        saveDescriptionContainer.classList.add('hidden');
-                    } catch (error) {
-                        console.error("儲存描述時發生錯誤：", error);
-                    }
-                });
-
-                clearSavedBtn.addEventListener('click', async () => {
-                    if (!savedDescriptionsCollection) {
-                        console.error("Firestore 集合尚未準備好。");
-                        return;
-                    }
-                    try {
-                        const q = query(savedDescriptionsCollection);
-                        const querySnapshot = await getDocs(q);
-                        querySnapshot.forEach(async (docRef) => {
-                            await deleteDoc(doc(savedDescriptionsCollection, docRef.id));
-                        });
-                    } catch (error) {
-                         console.error("清除描述時發生錯誤：", error);
-                    }
-                });
-
-            } else {
-                // 使用者未登入，但初始化邏輯已在 firebase-config.js 中處理
-                // 我們等待認證狀態改變，所以這裡不需要任何操作
-            }
-        });
-
-        const loadSavedDescriptions = () => {
-            if (!savedDescriptionsCollection) {
-                console.error("無法載入描述：Firestore 集合尚未準備好。");
-                return;
-            }
-            onSnapshot(query(savedDescriptionsCollection), (querySnapshot) => {
-                savedDescriptionsContainer.innerHTML = '';
-                querySnapshot.forEach((doc) => {
-                    const data = doc.data();
-                    const descriptionDiv = document.createElement('div');
-                    descriptionDiv.className = 'bg-gray-100 p-4 rounded-md shadow-sm';
-                    descriptionDiv.innerHTML = parseMarkdown(cleanGeneratedText(data.description));
-                    savedDescriptionsContainer.appendChild(descriptionDiv);
-                });
-            });
-        };
-
+        
         const generateCharacter = async () => {
             if (!mainImage) {
                 console.error("請先上傳圖片。");
