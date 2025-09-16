@@ -8,7 +8,7 @@ const appId = 'default-app-id';
 
 // 從您的 Firebase 專案複製的配置資訊
 const firebaseConfig = {
-    apiKey: "AIzaSyClbRV0tMn4rcu7rvTc4lsM2G3Dfc73BTM",
+    apiKey: "",
     authDomain: "charactergenerator-1700c.firebaseapp.com",
     projectId: "charactergenerator-1700c",
     storageBucket: "charactergenerator-1700c.firebasestorage.app",
