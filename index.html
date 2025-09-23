@@ -8,60 +8,185 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- 引入 Inter 字體 -->
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
         body {
             font-family: 'Inter', sans-serif;
-            background-color: #f3f4f6;
-            color: #1f2937;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            color: #d1d5db; /* 淺灰色字體，與深色背景搭配 */
+            background-color: #111827; /* 深色背景，無圖片 */
         }
-        .prose h1, .prose h2, .prose h3 {
-            margin-top: 1.5em;
-            margin-bottom: 0.5em;
+
+        /* 應用程式主容器樣式 */
+        #app-container {
+            background-color: rgba(31, 41, 55, 0.8); /* 深灰色半透明背景 */
+            backdrop-filter: blur(8px); /* 玻璃模糊效果 */
+            border: 1px solid rgba(156, 163, 175, 0.2);
+            border-radius: 2rem;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.2), 0 4px 6px -2px rgba(0, 0, 0, 0.1);
         }
-        .prose p {
-            margin-top: 0;
-            margin-bottom: 1em;
+
+        /* 輸入與輸出容器樣式 */
+        .container-box {
+            background-color: rgba(55, 65, 81, 0.6); /* 更深的半透明背景 */
+            border: 1px solid rgba(156, 163, 175, 0.3);
+            border-radius: 1rem;
+            padding: 1.5rem;
         }
-        .prose ul, .prose ol {
-            margin-top: 0;
-            margin-bottom: 1em;
-            padding-left: 1.5em;
+
+        /* 圖片預覽容器樣式 */
+        .image-preview-container {
+            min-height: 200px; /* 確保容器有足夠高度 */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-wrap: wrap; /* 允許圖片換行 */
+            gap: 1rem;
+            background-color: rgba(0, 0, 0, 0.3);
+            border: 2px solid #6366f1; /* 靛藍色邊框 */
+            box-shadow: 0 0 15px #6366f1; /* 發光效果 */
+            border-radius: 1rem;
+            overflow: hidden;
+            position: relative;
         }
-        .prose li {
-            margin-bottom: 0.5em;
+
+        .image-preview-container.is-main {
+            border-color: #ec4899; /* 粉色邊框 */
+            box-shadow: 0 0 15px #ec4899;
+            display: block; /* 讓單一圖片預覽能填滿容器 */
         }
-        .prose strong, .prose em, .prose code {
-            color: #1f2937;
+
+        /* 針對多圖預覽的容器設定 */
+        #element-preview-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+            gap: 1rem;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
         }
+
+        .preview-item {
+            position: relative;
+            aspect-ratio: 1 / 1;
+            overflow: hidden;
+        }
+
+        .preview-image {
+            width: 100%;
+            height: 100%;
+            object-fit: contain; /* 確保圖片完整顯示 */
+            background-color: #374151; /* 新增背景顏色 */
+            border-radius: 0.5rem;
+            transition: transform 0.3s ease-in-out;
+            cursor: pointer;
+        }
+        .preview-image:hover {
+            transform: scale(1.05);
+        }
+
         .drop-area {
             transition: all 0.2s ease-in-out;
-        }
-        .drop-area.border-dashed {
             border-style: dashed;
         }
         .drop-area.drag-over {
             border-color: #4f46e5;
-            background-color: #eef2ff;
+            background-color: rgba(238, 242, 255, 0.1);
+        }
+
+        .remove-btn {
+            position: absolute;
+            top: 0.25rem;
+            right: 0.25rem;
+            background-color: rgba(239, 68, 68, 0.8);
+            border-radius: 9999px;
+            padding: 0.25rem;
+            color: white;
+            cursor: pointer;
+            z-index: 20;
+            transition: all 0.2s ease-in-out;
+        }
+
+        .remove-btn:hover {
+            background-color: rgba(239, 68, 68, 1);
+            transform: scale(1.1);
+        }
+
+        .main-upload-overlay {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            background-color: rgba(31, 41, 55, 0.7);
+            opacity: 0;
+            transition: opacity 0.3s ease-in-out;
+            text-align: center;
+        }
+
+        .main-preview-label {
+            position: absolute;
+            inset: 0;
+            cursor: pointer;
+        }
+
+        .image-preview-container.is-main:hover .main-upload-overlay {
+            opacity: 1;
+        }
+
+        /* 角色畫廊樣式 */
+        #character-gallery {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 2rem;
+        }
+
+        .character-card {
+            background-color: #1f2937;
+            border-radius: 1rem;
+            overflow: hidden;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease-in-out;
+        }
+        .character-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 15px rgba(0,0,0,0.2);
+        }
+        .character-card-img {
+            width: 100%;
+            height: 250px;
+            object-fit: cover;
+        }
+        .character-card-content {
+            padding: 1rem;
+        }
+        .user-id-text {
+             font-size: 0.75rem;
+             color: #9ca3af;
+             word-break: break-all;
         }
     </style>
 </head>
 <body class="flex items-center justify-center min-h-screen p-4">
 
     <!-- 主容器 -->
-    <div class="bg-white shadow-xl rounded-2xl p-6 md:p-10 w-full max-w-4xl space-y-8">
-        
+    <div id="app-container" class="p-6 md:p-10 w-full max-w-5xl space-y-8 transition-all duration-300 transform scale-100">
+
         <!-- 標題 -->
         <div class="flex justify-center items-center mb-6">
-            <h1 class="text-3xl md:text-4xl font-extrabold text-gray-800">角色產生器</h1>
+            <h1 class="text-3xl md:text-4xl font-extrabold text-white tracking-tight text-shadow-lg">角色產生實驗室</h1>
         </div>
-        
+
         <!-- 應用程式主介面 -->
-        <div id="app-container" class="space-y-8">
-            <p class="text-center text-gray-500">上傳圖片，讓 AI 根據圖片產生一個角色的文字描述和全身圖像。</p>
-            
+        <div class="space-y-8">
+            <p class="text-center text-gray-300 max-w-2xl mx-auto">上傳圖片，讓 AI 根據圖片產生一個角色的文字描述和全身圖像。您可以選擇不同的風格，並將結果儲存起來。</p>
+
             <!-- 風格選擇區塊 -->
-            <div class="flex flex-col items-center">
-                <label for="style-select" class="block text-sm font-medium text-gray-700">選擇風格：</label>
-                <select id="style-select" class="mt-1 block w-full md:w-1/2 rounded-md border-gray-300 shadow-sm py-2 px-3 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm transition-all duration-300">
+            <div class="flex flex-col items-center container-box">
+                <label for="style-select" class="block text-sm font-medium text-gray-200 mb-2">選擇風格：</label>
+                <select id="style-select" class="block w-full md:w-1/2 rounded-full border-gray-600 shadow-sm py-2 px-4 bg-gray-700 text-white focus:ring-indigo-500 focus:border-indigo-500 text-sm transition-all duration-300">
                     <option value="Q版" selected>Q版</option>
                     <option value="水墨">水墨</option>
                     <option value="寫實">寫實</option>
@@ -69,41 +194,53 @@
             </div>
 
             <!-- 圖片上傳區塊 -->
-            <div class="grid md:grid-cols-2 gap-6">
-                <!-- 主要角色圖片區塊 -->
+            <div class="grid md:grid-cols-2 gap-8 container-box">
+                <!-- 主要角色圖片上傳與預覽區塊 -->
                 <div class="space-y-4">
-                    <label class="block text-sm font-medium text-gray-700">主要角色外觀圖片（單張）：</label>
-                    <div id="main-drop-area" class="drop-area mt-1 flex justify-center rounded-md border-2 border-dashed border-gray-300 px-6 pt-5 pb-6">
-                        <div class="space-y-1 text-center">
+                    <label class="block text-sm font-semibold text-gray-200">主要角色外觀圖片（單張）：</label>
+                    <div id="main-drop-area" class="drop-area flex justify-center rounded-2xl border-2 border-gray-600 px-6 pt-5 pb-6 bg-gray-700 hover:bg-gray-800 transition-colors duration-200">
+                        <div class="space-y-1 text-center" id="main-upload-content">
                             <!-- SVG 上傳圖標 -->
-                            <svg class="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48" aria-hidden="true">
+                            <svg class="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 24 24" aria-hidden="true">
                                 <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28m0 0l4 4m4-24h8m-4 0v8m-12 4h.02" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
                             </svg>
-                            <div class="flex text-sm text-gray-600">
-                                <label for="main-image-upload" class="relative cursor-pointer rounded-md bg-white font-medium text-indigo-600 focus-within:outline-none focus-within:ring-2 focus-within:ring-indigo-500 focus-within:ring-offset-2 hover:text-indigo-500">
+                            <div class="flex text-sm text-gray-400">
+                                <label for="main-image-upload" class="relative cursor-pointer rounded-md bg-gray-700 font-medium text-indigo-400 focus-within:outline-none focus-within:ring-2 focus-within:ring-indigo-500 focus-within:ring-offset-2 hover:text-indigo-300">
                                     <span>上傳檔案</span>
-                                    <input id="main-image-upload" name="main-image-upload" type="file" class="sr-only" accept="image/*">
                                 </label>
                                 <p class="pl-1">或拖放至此</p>
                             </div>
                             <p class="text-xs text-gray-500">PNG, JPG, GIF 等</p>
                         </div>
                     </div>
-                    <!-- 圖片預覽區 -->
-                    <div id="main-preview-container" class="mt-4 flex flex-wrap gap-4 justify-center"></div>
+                    <!-- 主要圖片預覽容器 -->
+                    <div id="main-preview-container" class="image-preview-container is-main relative">
+                        <!-- 確保 label 包裹整個可點擊區域 -->
+                        <label for="main-image-upload" class="main-preview-label flex flex-col items-center justify-center p-4">
+                            <div class="main-upload-overlay">
+                                <span class="text-white font-bold">點擊更換圖片</span>
+                                <svg class="h-8 w-8 text-white mt-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                                </svg>
+                            </div>
+                            <p class="text-center text-gray-500 text-sm">主角色圖片將顯示在此</p>
+                        </label>
+                    </div>
+                    <!-- 隱藏的檔案輸入元素 -->
+                    <input id="main-image-upload" name="main-image-upload" type="file" class="sr-only" accept="image/*">
                 </div>
 
-                <!-- 融合元素圖片區塊 -->
+                <!-- 融合元素圖片上傳與預覽區塊 -->
                 <div class="space-y-4">
-                    <label class="block text-sm font-medium text-gray-700">融合元素圖片（多張）：</label>
-                    <div id="element-drop-area" class="drop-area mt-1 flex justify-center rounded-md border-2 border-dashed border-gray-300 px-6 pt-5 pb-6">
-                        <div class="space-y-1 text-center">
+                    <label class="block text-sm font-semibold text-gray-200">融合元素圖片（多張）：</label>
+                    <div id="element-drop-area" class="drop-area flex justify-center rounded-2xl border-2 border-gray-600 px-6 pt-5 pb-6 bg-gray-700 hover:bg-gray-800 transition-colors duration-200">
+                        <div class="space-y-1 text-center" id="element-upload-content">
                             <!-- SVG 上傳圖標 -->
                             <svg class="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48" aria-hidden="true">
                                 <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28m0 0l4 4m4-24h8m-4 0v8m-12 4h.02" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
                             </svg>
-                            <div class="flex text-sm text-gray-600">
-                                <label for="element-image-upload" class="relative cursor-pointer rounded-md bg-white font-medium text-indigo-600 focus-within:outline-none focus-within:ring-2 focus-within:ring-indigo-500 focus-within:ring-offset-2 hover:text-indigo-500">
+                            <div class="flex text-sm text-gray-400">
+                                <label for="element-image-upload" class="relative cursor-pointer rounded-md bg-gray-700 font-medium text-indigo-400 focus-within:outline-none focus-within:ring-2 focus-within:ring-indigo-500 focus-within:ring-offset-2 hover:text-indigo-300">
                                     <span>上傳檔案</span>
                                     <input id="element-image-upload" name="element-image-upload" type="file" class="sr-only" multiple accept="image/*">
                                 </label>
@@ -112,134 +249,666 @@
                             <p class="text-xs text-gray-500">PNG, JPG, GIF 等</p>
                         </div>
                     </div>
-                    <!-- 圖片預覽區 -->
-                    <div id="element-preview-container" class="mt-4 flex flex-wrap gap-4 justify-center"></div>
+                    <!-- 融合元素圖片預覽容器 -->
+                    <div id="element-preview-container" class="image-preview-container">
+                        <p class="text-center text-gray-500 text-sm">融合元素圖片將顯示在此</p>
+                    </div>
                 </div>
             </div>
 
             <!-- 按鈕及狀態區塊 -->
-            <div class="flex justify-center items-center flex-wrap gap-4">
-                <button id="generate-btn" class="w-full md:w-auto px-6 py-3 bg-indigo-600 text-white font-semibold rounded-full shadow-lg hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition-transform transform hover:scale-105 disabled:bg-indigo-400 disabled:cursor-not-allowed">
-                    產生角色
-                </button>
-                <button id="regenerate-btn" class="hidden w-full md:w-auto px-6 py-3 bg-gray-500 text-white font-semibold rounded-full shadow-lg hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2 transition-transform transform hover:scale-105 disabled:bg-gray-400 disabled:cursor-not-allowed">
-                    重新產生
+            <div class="flex justify-center items-center flex-wrap gap-4 container-box">
+                <button id="action-btn" class="w-full md:w-auto px-8 py-3 bg-indigo-600 text-white font-semibold rounded-full shadow-lg hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition-transform transform hover:scale-105 disabled:bg-indigo-400 disabled:cursor-not-allowed">
+                    啟動反應！
                 </button>
             </div>
-            
+
+            <!-- 隨機元素提示 -->
+            <div id="random-element-info" class="hidden text-center text-sm font-semibold p-4 rounded-xl border-2 border-purple-400 bg-purple-900 bg-opacity-30">
+                <span class="text-purple-300"></span>
+            </div>
+
             <div class="flex justify-center">
                 <!-- 載入指示器 -->
-                <div id="loading-indicator" class="hidden flex items-center space-x-2 text-gray-500">
-                    <svg class="animate-spin h-5 w-5 text-gray-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <div id="loading-indicator" class="hidden flex items-center space-x-2 text-gray-400">
+                    <svg class="animate-spin h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                         <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                         <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                     </svg>
                     <span>AI 正在努力生成中...</span>
                 </div>
             </div>
-            
+
 
             <!-- 輸出結果區塊 -->
-            <div class="space-y-8">
+            <div class="space-y-8 container-box">
                 <!-- 圖像及下載按鈕區塊 -->
-                <div id="image-output-area" class="mt-4 flex flex-col items-center"></div>
-                
+                <div id="image-output-area" class="mt-4 flex flex-col items-center gap-8"></div>
+
                 <!-- 文字輸出區塊 -->
                 <div class="space-y-4">
-                    <div id="output-area" class="bg-gray-100 p-6 rounded-xl shadow-inner min-h-[150px] leading-relaxed text-gray-700">
-                        <h3 class="text-xl font-bold mb-4 text-center text-gray-800">角色描述</h3>
+                    <div id="output-area" class="bg-gray-800 p-8 rounded-2xl shadow-inner min-h-[150px] leading-relaxed text-gray-300">
+                        <h3 class="text-xl font-bold mb-4 text-center text-white">角色描述</h3>
                         <p class="text-center text-gray-500">AI 生成的結果將顯示在這裡。</p>
                     </div>
                 </div>
-                <div id="save-description-container" class="hidden flex justify-center mt-4">
-                    <button id="save-description-btn" class="w-full md:w-auto px-6 py-3 bg-green-600 text-white font-semibold rounded-full shadow-lg hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition-transform transform hover:scale-105">
-                        儲存描述
-                    </button>
-                </div>
             </div>
 
-            <!-- 已儲存描述區塊 -->
-            <div class="mt-8 pt-8 border-t border-gray-200">
-                <div class="flex justify-between items-center mb-4">
-                    <h2 class="text-2xl font-bold text-gray-800">已儲存的描述</h2>
-                    <button id="clear-saved-btn" class="text-sm text-red-600 hover:text-red-800">清除已儲存描述</button>
-                </div>
-                <div id="saved-descriptions-container" class="flex flex-col gap-4">
-                    <!-- 已儲存的描述將會在這裡載入 -->
-                </div>
+            <!-- 分隔線 -->
+            <div class="mt-8 pt-8 border-t border-gray-700 text-center">
+                <h2 class="text-2xl font-bold text-gray-200">共同創作的角色畫廊</h2>
+                <p id="user-id-display" class="text-sm font-semibold text-gray-500 mt-2 hidden"></p>
             </div>
-            <div class="mt-4 text-center text-gray-500 text-xs">
-                使用者 ID: <span id="user-id">讀取中...</span>
+            
+            <!-- 角色畫廊區塊 -->
+            <div id="character-gallery" class="mt-8">
+                <p id="gallery-loading" class="text-center text-gray-500">正在載入畫廊...</p>
+            </div>
+
+            <!-- 贊助區塊 -->
+            <div class="mt-12 pt-8 border-t border-gray-700 text-center container-box">
+                <h2 class="text-2xl font-bold text-gray-200 mb-4">喜歡這個工具嗎？</h2>
+                <p class="text-gray-400 mb-6">如果這個工具對你有幫助，請考慮贊助我們！您的支持是我們持續進步的動力。</p>
+                <div class="flex flex-col md:flex-row justify-center items-center gap-4">
+                    <!-- PayPal 贊助按鈕 (慣用連結) -->
+                    <a href="https://paypal.me/alstonhuang" target="_blank" rel="noopener noreferrer" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded-full inline-flex items-center space-x-2 transition-transform transform hover:scale-105">
+                        <svg class="h-6 w-6" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512" fill="currentColor">
+                            <path d="M298.5 281.2c-5.7-18-18.3-29.4-44.4-38.3-27.1-9.3-51.5-16.3-51.5-30.7 0-11.8 10.7-22.1 27.2-22.1 24.5 0 37.1 11.8 38 23.4l28.6-11.8c-2.3-15.6-11.6-28.7-22.6-37.1-13.3-10.1-31.5-15.9-52.6-15.9-46.7 0-77.9 23.5-77.9 61.6 0 35.8 30.5 53.8 68.7 66.8 33.1 11.2 46.1 16.5 46.1 30.9 0 16.5-12.7 26.3-33.3 26.3-27.1 0-41.5-12.2-46.2-28.7l-29.1 11.6c5.8 24.3 22.3 40.5 50.1 40.5 29 0 62.6-14.7 62.6-67.7 0-1.7-.1-3.4-.2-5.1zM384 256c0-141.4-114.6-256-256-256S0 114.6 0 256s114.6 256 256 256 256-114.6 256-256zm-90.8-124.7c-25.2 0-48.4 12.5-62.8 35.8-1.5 2.5-1.9 5.2-1.2 8.1l2.4 11.2c.8 3.7 4.1 6.2 7.9 6.2h28.1c3.7 0 6.6-3.1 5.9-6.8l-1.9-10.8c.1-.5.2-1.1.2-1.7 4.6-16.3 16.5-24.3 35.8-24.3 16.5 0 28.5 7.9 28.5 19.3 0 12.3-8.8 19.8-29.6 28.3-18.2 7.5-37 15.3-43.2 26.4-12.2 21.6-7.8 45.4 12 55.6 15.2 7.7 34.6 11.7 54.8 11.7 27 0 54.2-10.4 71.4-38 1.4-2.2 1.9-4.7 1.2-7.3l-2.4-11.2c-.8-3.7-4.1-6.2-7.9-6.2h-28.1c-3.7 0-6.6 3.1-5.9 6.8l1.9 10.8c-.1.5-.2 1.1-.2 1.7-4.6 16.3-16.5 24.3-35.8 24.3-16.5 0-28.5-7.9-28.5-19.3 0-12.3 8.8-19.8 29.6-28.3 18.2-7.5 37-15.3-43.2 26.4 12.2-21.6 7.8-45.4-12-55.6-15.2-7.7-34.6-11.7-54.8-11.7z"/>
+                        </svg>
+                        <span>贊助我 (PayPal)</span>
+                    </a>
+
+                    <!-- Buy Me a Coffee 贊助按鈕 (慣用連結) -->
+                    <a href="https://buymeacoffee.com/registerc" target="_blank" rel="noopener noreferrer" class="bg-yellow-400 hover:bg-yellow-500 text-gray-900 font-bold py-2 px-6 rounded-full inline-flex items-center space-x-2 transition-transform transform hover:scale-105">
+                        <svg class="h-6 w-6" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512" fill="currentColor">
+                            <path d="M160 64h320c8.8 0 16 7.2 16 16v32c0 8.8-7.2 16-16 16h-48c-8.8 0-16 7.2-16 16v16H160c-8.8 0-16-7.2-16-16v-16h-48c-8.8 0-16-7.2-16-16V80c0-8.8 7.2-16 16-16zm-80 96h480c26.5 0 48 21.5 48 48v224c0 26.5-21.5 48-48 48H80c-26.5 0-48-21.5-48-48V208c0-26.5 21.5-48 48-48zm480 208v-32c0-8.8-7.2-16-16-16H352v-64h160c8.8 0 16-7.2 16-16v-32c0-8.8-7.2-16-16-16H352c-8.8 0-16 7.2-16 16v32c0 8.8-7.2 16-16 16H96c-8.8 0-16 7.2-16 16v32c0 8.8 7.2 16 16 16h240v64h-96c-8.8 0-16 7.2-16 16v32c0 8.8 7.2 16 16 16h96c8.8 0 16-7.2 16-16v-32c0-8.8-7.2-16-16-16h224c8.8 0 16-7.2 16-16z"/>
+                        </svg>
+                        <span>請我喝杯咖啡</span>
+                    </a>
+                </div>
             </div>
         </div>
     </div>
 
     <script type="module">
+        // Firebase 相關匯入
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, setLogLevel, collection, addDoc, onSnapshot, query, getDocs, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, onSnapshot, query, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-storage.js";
+
+	// 判斷是否在 Canvas 環境中，並設定 Firebase 配置和權杖
+	const isCanvasEnv = typeof __firebase_config !== 'undefined';
+	let firebaseConfig;
+	let initialAuthToken;
+
+	if (isCanvasEnv) {
+	    console.log('Detected Canvas environment. Using provided Firebase configuration.');
+	    firebaseConfig = JSON.parse(__firebase_config);
+	    initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+	} else {
+		console.log('Canvas environment not detected. Using custom Firebase configuration.');
+	        // TODO: 如果您在 Canvas 之外運行此檔案，請在這裡貼上您的 Firebase 專案設定
+        	// 請從您的 Firebase Console > 專案設定 > 一般 > 您的應用程式 中獲取
+		firebaseConfig = {
+			apiKey: "AIzaSyClbRV0tMn4rcu7rvTc4lsM2G3Dfc73BTM",
+			authDomain: "charactergenerator-1700c.firebaseapp.com",
+			projectId: "charactergenerator-1700c",
+			storageBucket: "charactergenerator-1700c.firebasestorage.app",
+			messagingSenderId: "379178480455",
+			appId: "1:379178480455:web:dc595c412a371c4e6ad262",
+			measurementId: "G-3C5HE1R5DS"
+		};
+
+	        initialAuthToken = null; // 在 Canvas 外部，您通常會使用其他登入方式
+	}
+
+        // 初始化 Firebase
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        const storage = getStorage(app);
+        let userId = null;
+        let isAuthReady = false;
+
+        // HTML 元素
+        const mainImageUpload = document.getElementById('main-image-upload');
+        const elementImageUpload = document.getElementById('element-image-upload');
+        const mainPreviewContainer = document.getElementById('main-preview-container');
+        const elementPreviewContainer = document.getElementById('element-preview-container');
+        const outputArea = document.getElementById('output-area');
+        const imageOutputArea = document.getElementById('image-output-area');
+        const loadingIndicator = document.getElementById('loading-indicator');
+        const actionBtn = document.getElementById('action-btn');
+        const styleSelect = document.getElementById('style-select');
+        const mainDropArea = document.getElementById('main-drop-area');
+        const elementDropArea = document.getElementById('element-drop-area');
+        const mainUploadContent = document.getElementById('main-upload-content');
+        const elementUploadContent = document.getElementById('element-upload-content');
+        const randomElementInfo = document.getElementById('random-element-info');
+        const galleryContainer = document.getElementById('character-gallery');
+        const userIdDisplay = document.getElementById('user-id-display');
+
+        let mainImage = null;
+        let elementImages = [];
         
-        // 啟用 Firestore 偵錯日誌以查看詳細資訊
-        setLogLevel('debug');
+        // 隨機元素列表與對應的描述關鍵字
+        const randomElements = {
+            "火焰": "火光",
+            "冰霜": "冰晶",
+            "蒸汽": "蒸汽",
+            "水晶": "水晶",
+            "金屬": "金屬",
+            "植物": "藤蔓",
+            "幽靈": "幽靈",
+            "閃電": "閃電",
+            "齒輪": "齒輪",
+            "墨水": "墨水",
+            "羽毛": "羽毛",
+            "岩石": "岩石",
+            "沙塵": "沙塵",
+        };
 
-        // 從全域變數中取得 Firebase 配置和認證 Token
-        const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
-        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+	const geminiApiKey = "AIzaSyBpYzSNx_nrMEr5hDojeV2OGbNJoyw5F-0"; // Your Gemini API key
 
-        let app = null;
-        let auth = null;
-        let db = null;
-        let savedDescriptionsCollection = null;
-        let lastGeneratedText = '';
+	const storyApiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${geminiApiKey}`;
+	const characterApiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image-preview:generateContent?key=${geminiApiKey}`;
 
-        // 檢查 firebaseConfig 是否有效，並嘗試初始化 Firebase
-        if (Object.keys(firebaseConfig).length > 0) {
-            try {
-                app = initializeApp(firebaseConfig);
-                auth = getAuth(app);
-                db = getFirestore(app);
-                
-                // 使用提供的 token 登入，或作為匿名使用者登入
+        // 等待認證狀態就緒
+        onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                userId = user.uid;
+                isAuthReady = true;
+                console.log("登入成功，使用者 ID:", userId);
+                userIdDisplay.textContent = `您的使用者ID：${userId}`;
+                userIdDisplay.classList.remove('hidden');
+                // 認證成功後，開始載入畫廊
+                loadCharacters();
+            } else {
+                // 如果沒有登入，嘗試使用自訂 token 或匿名登入
                 if (initialAuthToken) {
-                    signInWithCustomToken(auth, initialAuthToken).catch(error => {
+                    await signInWithCustomToken(auth, initialAuthToken).catch(error => {
                         console.error("使用自訂 token 登入失敗:", error);
-                        // 如果自訂 token 失敗，仍嘗試匿名登入
-                        signInAnonymously(auth).catch(anonError => {
-                            console.error("匿名登入失敗:", anonError);
-                        });
+                        signInAnonymously(auth);
                     });
                 } else {
-                    signInAnonymously(auth).catch(error => {
-                        console.error("匿名登入失敗:", error);
-                    });
+                    await signInAnonymously(auth);
                 }
+            }
+            updateButtonState();
+        });
 
-                // 監聽 Firebase 認證狀態的變化
-                onAuthStateChanged(auth, async (user) => {
-                    if (user) {
-                        const userId = user.uid;
-                        document.getElementById('user-id').textContent = userId;
-                        savedDescriptionsCollection = collection(db, `artifacts/${appId}/users/${userId}/savedDescriptions`);
-                        loadSavedDescriptions();
+        // 輔助函式：根據檔案陣列重新渲染預覽
+        const renderElementPreviews = () => {
+            elementPreviewContainer.innerHTML = '';
+            if (elementImages.length === 0) {
+                elementPreviewContainer.innerHTML = `<p class="text-center text-gray-500 text-sm">融合元素圖片將顯示在此</p>`;
+                elementUploadContent.classList.remove('hidden');
+            } else {
+                elementImages.forEach((file, index) => {
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        const previewItem = document.createElement('div');
+                        previewItem.className = 'preview-item';
+                        previewItem.innerHTML = `
+                            <img src="${e.target.result}" alt="圖片預覽" class="preview-image" />
+                            <button class="remove-btn" data-index="${index}">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </button>
+                        `;
+                        elementPreviewContainer.appendChild(previewItem);
+                    };
+                    reader.readAsDataURL(file);
+                });
+                elementUploadContent.classList.add('hidden');
+            }
+        };
 
-                        // 啟用並註冊 Firebase 相關的事件監聽器
-                        saveDescriptionBtn.addEventListener('click', saveDescription);
-                        clearSavedBtn.addEventListener('click', clearSavedDescriptions);
-                    } else {
-                        document.getElementById('user-id').textContent = '未連線到 Firebase';
-                        console.warn('Firebase 認證狀態：未連線');
-                    }
+        const renderMainPreview = () => {
+            if (mainImage) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    mainPreviewContainer.innerHTML = `
+                        <label for="main-image-upload" class="main-preview-label">
+                            <div class="main-upload-overlay">
+                                <span class="text-white font-bold">點擊更換圖片</span>
+                                <svg class="h-8 w-8 text-white mt-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                                </svg>
+                            </div>
+                            <img src="${e.target.result}" class="w-full h-full rounded-2xl" style="object-fit: contain; background-color: #374151;" />
+                        </label>`;
+                    mainDropArea.classList.add('hidden'); // 隱藏拖曳區域
+                };
+                reader.readAsDataURL(mainImage);
+            } else {
+                mainPreviewContainer.innerHTML = `<p class="text-center text-gray-500 text-sm">主角色圖片將顯示在此</p>`;
+                mainDropArea.classList.remove('hidden'); // 顯示拖曳區域
+            }
+            updateButtonState();
+        };
+
+        const updateButtonState = () => {
+            actionBtn.disabled = !mainImage || !isAuthReady;
+        };
+
+        // 處理主要圖片的上傳與更換
+        const handleMainImageUpload = (file) => {
+            mainImage = file;
+            renderMainPreview();
+        };
+
+        // 監聽主要圖片上傳輸入框的變動
+        mainImageUpload.addEventListener('change', (event) => {
+            const files = event.target.files;
+            if (files.length > 0) {
+                handleMainImageUpload(files[0]);
+            }
+        });
+
+        // 監聽融合元素圖片上傳輸入框的變動
+        elementImageUpload.addEventListener('change', (event) => {
+            const files = event.target.files;
+            elementImages = [...elementImages, ...Array.from(files)];
+            event.target.value = ''; // 重設 input 值，以便再次上傳同一個檔案
+            renderElementPreviews();
+        });
+
+        // 監聽融合元素圖片預覽容器的點擊事件，用於移除單張圖片
+        elementPreviewContainer.addEventListener('click', function(event) {
+            const removeBtn = event.target.closest('.remove-btn');
+            if (removeBtn) {
+                const index = parseInt(removeBtn.dataset.index);
+                if (index >= 0 && index < elementImages.length) {
+                    elementImages.splice(index, 1);
+                    renderElementPreviews();
+                }
+            }
+        });
+
+        // 拖曳上傳功能
+        const preventDefaults = (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+        };
+
+        const highlight = (e) => {
+            e.currentTarget.classList.add('drag-over');
+        };
+
+        const unhighlight = (e) => {
+            e.currentTarget.classList.remove('drag-over');
+        };
+
+        const handleDrop = (e, isMain) => {
+            unhighlight(e);
+            const dt = e.dataTransfer;
+            const files = dt.files;
+
+            if (isMain) {
+                if (files.length > 0) {
+                    handleMainImageUpload(files[0]);
+                }
+            } else {
+                elementImages = [...elementImages, ...Array.from(files)];
+                renderElementPreviews();
+            }
+            updateButtonState();
+        };
+
+        // 註冊拖曳事件監聽器
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            mainDropArea.addEventListener(eventName, preventDefaults, false);
+            elementDropArea.addEventListener(eventName, preventDefaults, false);
+        });
+        ['dragenter', 'dragover'].forEach(eventName => {
+            mainDropArea.addEventListener(eventName, highlight, false);
+            elementDropArea.addEventListener(eventName, highlight, false);
+        });
+        ['dragleave', 'drop'].forEach(eventName => {
+            mainDropArea.addEventListener(eventName, unhighlight, false);
+            elementDropArea.addEventListener(eventName, unhighlight, false);
+        });
+        mainDropArea.addEventListener('drop', (e) => handleDrop(e, true), false);
+        elementDropArea.addEventListener('drop', (e) => handleDrop(e, false), false);
+
+        // 新增的短篇故事生成函數
+        const generateRandomStory = async (elementKeyword) => {
+            const prompt = `以科幻實驗室為背景，用簡潔、詩意的方式，為「${elementKeyword}」這個概念創作一個短篇故事。故事必須是一兩個句子，並描繪出一個神秘或充滿戲劇性的瞬間。不要包含任何介紹性或結尾性的句子。`;
+            const payload = {
+                contents: [{ parts: [{ text: prompt }] }],
+                systemInstruction: { parts: [{ text: "你是一個詩意的說書人，專門為科幻實驗室創造故事。" }] },
+            };
+            let story = `...`;
+            try {
+                const response = await fetch(storyApiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const result = await response.json();
+                story = result?.candidates?.[0]?.content?.parts?.[0]?.text || story;
+            } catch (error) {
+                console.error("生成故事時發生錯誤:", error);
+                story = `...`;
+            }
+            return story;
+        };
+
+        // 新增: 將生成的角色儲存到 Firestore
+        const saveCharacterToDatabase = async (characterData, fullBodyBlob, skillBlob) => {
+            if (!userId) {
+                console.error("無法儲存：使用者尚未登入。");
+                return;
+            }
+            
+            try {
+                // 上傳全身圖到 Firebase Storage
+                const fullBodyRef = ref(storage, `artifacts/${firebaseConfig.appId}/public/images/${Date.now()}-fullbody.png`);
+                await uploadBytes(fullBodyRef, fullBodyBlob);
+                const fullBodyUrl = await getDownloadURL(fullBodyRef);
+
+                // 上傳技能圖到 Firebase Storage
+                const skillRef = ref(storage, `artifacts/${firebaseConfig.appId}/public/images/${Date.now()}-skill.png`);
+                await uploadBytes(skillRef, skillBlob);
+                const skillUrl = await getDownloadURL(skillRef);
+
+                // 將資料儲存到 Firestore
+                const charactersCol = collection(db, `artifacts/${firebaseConfig.appId}/public/data/characters`);
+                await addDoc(charactersCol, {
+                    ...characterData,
+                    fullBodyImageUrl: fullBodyUrl,
+                    skillImageUrl: skillUrl,
+                    generatedByUserId: userId,
+                    createdAt: serverTimestamp()
                 });
 
+                console.log("角色已成功儲存到資料庫！");
+
             } catch (error) {
-                console.error("Firebase 初始化失敗。儲存與載入功能將無法使用。", error);
-                document.getElementById('user-id').textContent = '連線失敗';
+                console.error("儲存角色到資料庫時發生錯誤：", error);
             }
-        } else {
-            console.warn("Firebase 配置缺失。儲存與載入功能將無法使用。");
-            document.getElementById('user-id').textContent = '配置缺失';
-        }
+        };
+
+        // 新增: 從 Firestore 載入所有角色
+        const loadCharacters = () => {
+            // 修正：從 app 物件中取得 appId
+            //const charactersCol = collection(db, `artifacts/${app.options.appId}/public/data/characters`);
+            const charactersCol = collection(db, `artifacts/${firebaseConfig.appId}/public/data/characters`);
+            const q = query(charactersCol);
+            
+            const unsubscribe = onSnapshot(q, (snapshot) => {
+                galleryContainer.innerHTML = '';
+                if (snapshot.empty) {
+                    galleryContainer.innerHTML = `<p class="text-center text-gray-500">目前還沒有任何角色，成為第一個創造者吧！</p>`;
+                    return;
+                }
+
+                snapshot.forEach((doc) => {
+                    const character = doc.data();
+                    const card = document.createElement('div');
+                    card.className = 'character-card';
+                    card.innerHTML = `
+                        <img src="${character.fullBodyImageUrl}" alt="角色圖片" class="character-card-img" />
+                        <div class="character-card-content">
+                            <p class="text-sm font-semibold text-gray-200">${character.description.split('\n')[0]}</p>
+                            <p class="user-id-text mt-1">由 ${character.generatedByUserId.substring(0, 8)}... 創建</p>
+                        </div>
+                    `;
+                    galleryContainer.appendChild(card);
+                });
+            }, (error) => {
+                console.error("即時監聽資料庫時發生錯誤:", error);
+                galleryContainer.innerHTML = `<p class="text-center text-red-400">載入畫廊時發生錯誤。</p>`;
+            });
+
+            // 在這裡可以選擇返回 unsubscribe 函數，以便在需要時停止監聽
+        };
+
+
+        const generateCharacter = async () => {
+            if (!mainImage) {
+                console.error("請先上傳圖片。");
+                return;
+            }
+
+            loadingIndicator.classList.remove('hidden');
+            actionBtn.disabled = true;
+            randomElementInfo.classList.add('hidden'); // 隱藏提示，稍後再決定是否顯示
+
+            const selectedStyle = styleSelect.value;
+            const elementsCount = Math.min(elementImages.length, 2);
+            const selectedElementImages = elementImages.slice(0, elementsCount);
+
+            let randomFusionStory = '';
+            const randomElementsKeys = Object.keys(randomElements);
+            if (Math.random() < 0.7) { // 70% 的機率
+                const randomIndex = Math.floor(Math.random() * randomElementsKeys.length);
+                const randomElementKeyword = randomElementsKeys[randomIndex];
+                randomFusionStory = await generateRandomStory(randomElements[randomElementKeyword]);
+                randomElementInfo.querySelector('span').textContent = `${randomFusionStory}`;
+                randomElementInfo.classList.remove('hidden');
+            } else {
+                 randomFusionStory = `...`;
+                 // 這裡不需要顯示提示，因為沒有隨機融合發生
+            }
+
+            const base64MainImage = await new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.onloadend = () => resolve(reader.result.split(',')[1]);
+                reader.readAsDataURL(mainImage);
+            });
+
+            const base64ElementImages = await Promise.all(selectedElementImages.map(file => {
+                return new Promise((resolve) => {
+                    const reader = new FileReader();
+                    reader.onloadend = () => resolve(reader.result.split(',')[1]);
+                    reader.readAsDataURL(file);
+                });
+            }));
+
+        const promptText = `
+        你是一位專業的角色設計師。這次，請你專注於以 **${selectedStyle} 風格** 來創作角色。請將以下第一張圖片視為角色的主要外觀參考，並從後續的圖片中抽取風格、色彩或道具等元素進行融合。
+
+        ${randomFusionStory ? `
+        **請特別注意，本次融合還將參考以下隨機故事元素：** ${randomFusionStory}
+        **將這些元素視覺化，並融入到角色的外觀、服裝或技能效果中。**
+        ` : ''}
+
+        根據這些圖片，為一個新的虛擬角色寫一段詳細的文字描述。
+        
+        文字描述需包含：
+        1. 簡短的故事背景：說明角色的來歷或重要經歷。
+        2. 職業與風格：描述角色的職業和整體服裝風格。
+        3. 技能：列出至少三項獨特技能，並註明它們的冷卻時間（CD）。
+        4. 特技：描述一項能扭轉戰局或獨一無二的絕招。請簡潔地說明其效果與代價，並註明它的冷卻時間。
+
+        **接著，請根據這段文字描述，產生兩張分開的圖像，並確保這兩張圖都嚴格遵循 **${selectedStyle} 風格**：**
+        
+        **請務必確保以下兩張圖片中的角色外觀、服裝和配色是完全一致的，就像是同一個角色的不同姿勢一樣。**
+
+        1. **角色全身圖**：生成一張 ${selectedStyle} 風格的角色全身圖像。圖片必須是單獨一個角色，擺出靜態的、展示服裝細節的姿勢，且背景簡潔。
+        
+        2. **施展技能圖**：生成一張 ${selectedStyle} 風格的圖像，描繪角色正在施展其「特技」時的動態場景。這張圖必須包含技能的視覺效果，例如閃電、火焰、魔法光芒或強風，以突顯其動作。圖片必須是單獨一個角色，且背景簡潔。
+        
+        **絕對禁止在生成的圖像中包含任何文字、字母或符號。**
+        
+        請注意：我將在一個畫廊應用程式中使用你提供的圖片。請務必生成完整的、引人注目的圖像。`;
+
+
+	    // 修正後的程式碼：
+	    const parts = [];
+	    parts.push({ text: promptText });
+
+	    // 處理第一張主圖片
+	    const cleanedBase64MainImage = base64MainImage.split(',')[1] || base64MainImage;
+	    parts.push({ inlineData: { mimeType: mainImage.type, data: cleanedBase64MainImage } });
+
+	    // 處理其他圖片
+	    if (elementImages && elementImages.length > 0) {
+	        for (const imageFile of elementImages) {
+	            // 使用 FileReader 重新讀取每個檔案並獲取其類型
+	            const base64Data = await new Promise((resolve) => {
+	                const reader = new FileReader();
+	                reader.onload = (e) => {
+	                    // 修正：確保 Base64 字串中不包含字首
+	                    resolve(e.target.result.split(',')[1]);
+	                };
+	                reader.readAsDataURL(imageFile);
+	            });
+
+	            // 修正：動態讀取檔案類型
+	            parts.push({ inlineData: { mimeType: imageFile.type, data: base64Data } });
+	        }
+	    }
+
+            // 如果有隨機故事，將其也加入 parts
+            // if (randomFusionStory) {
+            //     parts.push({ text: `**隨機故事元素：** ${randomFusionStory}` });
+            // }
+
+            try {
+                // 呼叫 Gemini API
+                const response = await fetch(characterApiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        contents: [{ role: "user", parts }],
+                        //generationConfig: {
+                        //    responseModality: ["TEXT", "IMAGE"],
+                        //},
+                    }),
+                });
+
+            if (!response.ok) {
+                // 嘗試解析 JSON 錯誤回應
+                try {
+                    const errorData = await response.json();
+                    // 輸出更詳細的錯誤訊息，包含 API 的 message
+                    console.error("API 錯誤回應：", errorData);
+                    throw new Error(`API 回應錯誤：${response.status} - ${errorData.message}`);
+                } catch (e) {
+                    // 如果 API 回應不是 JSON，則拋出一般錯誤
+                    console.error("無法解析 API 錯誤回應：", e);
+                    throw new Error(`API 回應錯誤：${response.status} - 無法取得詳細資訊`);
+                }
+            }
+
+                const result = await response.json();
+                const candidates = result.candidates?.[0];
+                const textPart = candidates?.content?.parts?.find(p => p.text);
+                const imageParts = candidates?.content?.parts?.filter(p => p.inlineData);
+                let generatedText = '';
+                
+                if (textPart && textPart.text) {
+                    generatedText = cleanGeneratedText(textPart.text);
+                    outputArea.innerHTML = parseMarkdown(generatedText);
+                } else {
+                    outputArea.innerHTML = `<p class="text-red-400">AI 無法產生描述。請再試一次。</p>`;
+                    console.error("API 回應中未找到文字部分。");
+                }
+
+                if (imageParts && imageParts.length >= 2) {
+                    imageOutputArea.innerHTML = ''; // 清空舊的圖片
+
+                    const fullBodyImagePart = imageParts[0];
+                    const skillImagePart = imageParts[1];
+
+                    // 處理分享和下載邏輯
+                    const createDivWithImageAndButtons = (label, imageData, mimeType, filename, shareText) => {
+                        const container = document.createElement('div');
+                        container.className = 'flex flex-col items-center w-full max-w-xl';
+
+                        const labelEl = document.createElement('h3');
+                        labelEl.textContent = label;
+                        labelEl.className = 'text-xl font-bold mb-4 text-center text-white';
+                        container.appendChild(labelEl);
+
+                        const imageUrl = `data:${mimeType};base64,${imageData}`;
+                        const newImage = document.createElement('img');
+                        newImage.src = imageUrl;
+                        newImage.alt = label;
+                        newImage.className = 'w-full rounded-2xl shadow-lg border-2 border-gray-600 mb-4 transition-transform transform hover:scale-[1.01]';
+                        newImage.style.objectFit = 'contain';
+                        container.appendChild(newImage);
+
+                        const buttonGroupWithMessage = document.createElement('div');
+                        buttonGroupWithMessage.className = 'button-group-with-message flex flex-col items-center gap-2 w-full';
+
+                        const buttonContainer = document.createElement('div');
+                        buttonContainer.className = 'flex flex-wrap justify-center gap-4';
+
+                        const downloadBtn = document.createElement('a');
+                        downloadBtn.href = imageUrl;
+                        downloadBtn.download = filename;
+                        downloadBtn.className = 'px-8 py-3 bg-blue-600 text-white font-semibold rounded-full shadow-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-transform transform hover:scale-105';
+                        downloadBtn.textContent = '下載圖片';
+                        buttonContainer.appendChild(downloadBtn);
+
+                        const shareBtn = document.createElement('button');
+                        shareBtn.className = 'px-8 py-3 bg-green-600 text-white font-semibold rounded-full shadow-lg hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition-transform transform hover:scale-105';
+                        shareBtn.textContent = '分享圖片';
+                        shareBtn.addEventListener('click', () => {
+                            shareImage(shareBtn, imageData, mimeType, `我的新角色：${label}`, outputArea.textContent);
+                        });
+                        buttonContainer.appendChild(shareBtn);
+
+                        buttonGroupWithMessage.appendChild(buttonContainer);
+
+                        const shareMessage = document.createElement('div');
+                        shareMessage.className = 'share-message text-red-400 text-sm font-semibold mt-2 text-center hidden';
+                        buttonGroupWithMessage.appendChild(shareMessage);
+
+                        container.appendChild(buttonGroupWithMessage);
+                        return container;
+                    };
+
+                    const fullBodyDiv = createDivWithImageAndButtons(
+                        '角色全身圖',
+                        fullBodyImagePart.inlineData.data,
+                        fullBodyImagePart.inlineData.mimeType,
+                        'generated_character_full_body.png',
+                        outputArea.textContent
+                    );
+
+                    const skillDiv = createDivWithImageAndButtons(
+                        '施展技能圖',
+                        skillImagePart.inlineData.data,
+                        skillImagePart.inlineData.mimeType,
+                        'generated_character_skill.png',
+                        outputArea.textContent
+                    );
+
+                    imageOutputArea.appendChild(fullBodyDiv);
+                    imageOutputArea.appendChild(skillDiv);
+
+                    // 新增：將生成的資料儲存到資料庫
+                    if (generatedText) {
+                        const fullBodyBlob = await (await fetch(`data:${fullBodyImagePart.inlineData.mimeType};base64,${fullBodyImagePart.inlineData.data}`)).blob();
+                        const skillBlob = await (await fetch(`data:${skillImagePart.inlineData.mimeType};base64,${skillImagePart.inlineData.data}`)).blob();
+                        const characterData = {
+                            description: generatedText
+                        };
+                        await saveCharacterToDatabase(characterData, fullBodyBlob, skillBlob);
+                    }
+
+                } else {
+                    console.error("API 回應中未找到足夠的圖片部分。");
+                    imageOutputArea.innerHTML = `<p class="text-red-400 text-center">很抱歉，AI 暫時無法根據您提供的圖片組合生成兩張圖像。請嘗試重新產生。</p>`;
+                }
+
+            } catch (error) {
+                console.error("角色產生失敗：", error);
+                outputArea.innerHTML = `<p class="text-red-400">角色產生失敗。請檢查您的網路連線或稍後再試。</p>`;
+                imageOutputArea.innerHTML = '';
+            } finally {
+                loadingIndicator.classList.add('hidden');
+                actionBtn.disabled = false;
+                actionBtn.textContent = "重新產生";
+            }
+        };
 
         const parseMarkdown = (markdownText) => {
             const lines = markdownText.split('\n');
@@ -249,7 +918,7 @@
 
             for (let i = 0; i < lines.length; i++) {
                 let line = lines[i].trim();
-                
+
                 if (line === '') {
                     if (inList) {
                         html += `</${currentListType}>`;
@@ -280,7 +949,7 @@
                         html += `</${currentListType}>`;
                         inList = false;
                     }
-                    
+
                     let tempLine = line;
                     // Headers (h1, h2, h3)
                     if (tempLine.startsWith('### ')) {
@@ -313,7 +982,7 @@
 
             return html;
         };
-        
+
         // Function to clean up unwanted phrases from the AI's response
         const cleanGeneratedText = (text) => {
             let cleanedText = text;
@@ -340,300 +1009,8 @@
             return cleanedText.trim();
         };
 
-        const saveDescription = async () => {
-            if (!savedDescriptionsCollection || !lastGeneratedText) {
-                console.error("無法儲存：Firestore 集合或描述尚未準備好。");
-                return;
-            }
-            try {
-                await addDoc(savedDescriptionsCollection, {
-                    description: lastGeneratedText,
-                    timestamp: new Date().toISOString()
-                });
-                saveDescriptionContainer.classList.add('hidden');
-            } catch (error) {
-                console.error("儲存描述時發生錯誤：", error);
-            }
-        };
-
-        const clearSavedDescriptions = async () => {
-            if (!savedDescriptionsCollection) {
-                console.error("Firestore 集合尚未準備好。");
-                return;
-            }
-            try {
-                const q = query(savedDescriptionsCollection);
-                const querySnapshot = await getDocs(q);
-                querySnapshot.forEach(async (docRef) => {
-                    await deleteDoc(doc(savedDescriptionsCollection, docRef.id));
-                });
-            } catch (error) {
-                 console.error("清除描述時發生錯誤：", error);
-            }
-        };
-
-        const loadSavedDescriptions = () => {
-            if (!savedDescriptionsCollection) {
-                console.error("無法載入描述：Firestore 集合尚未準備好。");
-                return;
-            }
-            onSnapshot(query(savedDescriptionsCollection), (querySnapshot) => {
-                savedDescriptionsContainer.innerHTML = '';
-                querySnapshot.forEach((doc) => {
-                    const data = doc.data();
-                    const descriptionDiv = document.createElement('div');
-                    descriptionDiv.className = 'bg-gray-100 p-4 rounded-md shadow-sm';
-                    descriptionDiv.innerHTML = parseMarkdown(cleanGeneratedText(data.description));
-                    savedDescriptionsContainer.appendChild(descriptionDiv);
-                });
-            });
-        };
-        
-        // HTML 元素
-        const mainImageUpload = document.getElementById('main-image-upload');
-        const elementImageUpload = document.getElementById('element-image-upload');
-        const mainPreviewContainer = document.getElementById('main-preview-container');
-        const elementPreviewContainer = document.getElementById('element-preview-container');
-        const outputArea = document.getElementById('output-area');
-        const imageOutputArea = document.getElementById('image-output-area');
-        const loadingIndicator = document.getElementById('loading-indicator');
-        const generateBtn = document.getElementById('generate-btn');
-        const regenerateBtn = document.getElementById('regenerate-btn');
-        const saveDescriptionBtn = document.getElementById('save-description-btn');
-        const saveDescriptionContainer = document.getElementById('save-description-container');
-        const clearSavedBtn = document.getElementById('clear-saved-btn');
-        const savedDescriptionsContainer = document.getElementById('saved-descriptions-container');
-        const styleSelect = document.getElementById('style-select');
-        const mainDropArea = document.getElementById('main-drop-area');
-        const elementDropArea = document.getElementById('element-drop-area');
-        
-        let mainImage = null;
-        let elementImages = [];
-        const apiKey = "";
-        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image-preview:generateContent?key=${apiKey}`;
-
-        // 輔助函式：處理單一圖片預覽
-        const handleImagePreview = (file, container, isMain = false) => {
-            if (!file) return;
-
-            if (isMain) {
-                // 清空舊的預覽
-                container.innerHTML = '';
-            }
-
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                const img = document.createElement('img');
-                img.src = e.target.result;
-                img.className = 'w-32 h-32 object-cover rounded-lg shadow-md';
-                container.appendChild(img);
-            };
-            reader.readAsDataURL(file);
-        };
-
-        const updateButtonState = () => {
-            generateBtn.disabled = !mainImage;
-        };
-        
-        // 監聽主要圖片上傳
-        mainImageUpload.addEventListener('change', (event) => {
-            const files = event.target.files;
-            if (files.length > 0) {
-                mainImage = files[0];
-                handleImagePreview(mainImage, mainPreviewContainer, true);
-            }
-            updateButtonState();
-        });
-
-        // 監聽融合元素圖片上傳
-        elementImageUpload.addEventListener('change', (event) => {
-            const files = event.target.files;
-            if (files.length > 0) {
-                elementImages = Array.from(files);
-                elementPreviewContainer.innerHTML = '';
-                elementImages.forEach(file => handleImagePreview(file, elementPreviewContainer));
-            }
-        });
-
-        // 拖曳上傳功能
-        // 防止瀏覽器預設行為
-        const preventDefaults = (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-        };
-
-        // 處理拖曳進入事件
-        const highlight = (e) => {
-            e.currentTarget.classList.add('drag-over');
-        };
-
-        // 處理拖曳離開事件
-        const unhighlight = (e) => {
-            e.currentTarget.classList.remove('drag-over');
-        };
-
-        // 處理檔案放置
-        const handleDrop = (e) => {
-            unhighlight(e);
-            const dt = e.dataTransfer;
-            const files = dt.files;
-
-            if (e.currentTarget.id === 'main-drop-area') {
-                if (files.length > 0) {
-                    mainImage = files[0];
-                    handleImagePreview(mainImage, mainPreviewContainer, true);
-                    updateButtonState();
-                }
-            } else if (e.currentTarget.id === 'element-drop-area') {
-                elementImages = Array.from(files);
-                elementPreviewContainer.innerHTML = '';
-                elementImages.forEach(file => handleImagePreview(file, elementPreviewContainer));
-            }
-        };
-
-        // 註冊拖曳事件監聽器
-        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
-            mainDropArea.addEventListener(eventName, preventDefaults, false);
-            elementDropArea.addEventListener(eventName, preventDefaults, false);
-        });
-        ['dragenter', 'dragover'].forEach(eventName => {
-            mainDropArea.addEventListener(eventName, highlight, false);
-            elementDropArea.addEventListener(eventName, highlight, false);
-        });
-        ['dragleave', 'drop'].forEach(eventName => {
-            mainDropArea.addEventListener(eventName, unhighlight, false);
-            elementDropArea.addEventListener(eventName, unhighlight, false);
-        });
-        mainDropArea.addEventListener('drop', handleDrop, false);
-        elementDropArea.addEventListener('drop', handleDrop, false);
-        
-        const generateCharacter = async () => {
-            if (!mainImage) {
-                console.error("請先上傳圖片。");
-                return;
-            }
-
-            loadingIndicator.classList.remove('hidden');
-            generateBtn.disabled = true;
-            regenerateBtn.disabled = true;
-            saveDescriptionContainer.classList.add('hidden');
-            
-            const selectedStyle = styleSelect.value;
-
-            const promptText = `
-            你是一位專業的角色設計師。請將以下第一張圖片視為角色的主要外觀參考，並從後續的圖片中抽取風格、色彩或道具等元素進行融合。根據這些圖片，為一個新的虛擬角色寫一段詳細的文字描述，並生成一張角色全身圖像。
-
-            **絕對禁止在生成的圖像中包含任何文字、字母或符號。**
-            
-            文字描述需包含：
-            1. 簡短的故事背景：說明角色的來歷或重要經歷。
-            2. 職業與風格：描述角色的職業和整體服裝風格。
-            3. 技能：列出至少三項獨特技能，並註明它們的冷卻時間（CD）。
-            4. 特技：描述一項能扭轉戰局或獨一無二的絕招。請簡潔地說明其效果與代價，並註明它的冷卻
-            時間。
-            
-            圖像指令：
-            生成一張 ${selectedStyle} 風格的 ${selectedStyle} 角色全身圖像。圖片必須是單獨一個角色，且背景簡潔。
-
-            請注意：我將在一個畫廊應用程式中使用你提供的圖片。請務必生成完整的、引人注目的圖像。`;
-            
-            const base64MainImage = await new Promise((resolve) => {
-                const reader = new FileReader();
-                reader.onloadend = () => resolve(reader.result.split(',')[1]);
-                reader.readAsDataURL(mainImage);
-            });
-
-            const base64ElementImages = await Promise.all(elementImages.map(file => {
-                return new Promise((resolve) => {
-                    const reader = new FileReader();
-                    reader.onloadend = () => resolve(reader.result.split(',')[1]);
-                    reader.readAsDataURL(file);
-                });
-            }));
-            
-            const parts = [{ text: promptText }];
-            parts.push({ inlineData: { mimeType: mainImage.type, data: base64MainImage } });
-            base64ElementImages.forEach(base64Data => {
-                parts.push({ inlineData: { mimeType: 'image/jpeg', data: base64Data } });
-            });
-            
-            const payload = {
-                contents: [{ parts }],
-                generationConfig: {
-                    responseModalities: ["TEXT", "IMAGE"],
-                },
-            };
-
-            try {
-                const response = await fetch(apiUrl, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-
-                if (!response.ok) {
-                    const errorData = await response.json();
-                    throw new Error(`API 錯誤：${response.status} - ${errorData.message}`);
-                }
-
-                const result = await response.json();
-                const textPart = result?.candidates?.[0]?.content?.parts?.find(p => p.text);
-                const imagePart = result?.candidates?.[0]?.content?.parts?.find(p => p.inlineData);
-
-                if (textPart && textPart.text) {
-                    const generatedText = cleanGeneratedText(textPart.text);
-                    lastGeneratedText = generatedText;
-                    outputArea.innerHTML = parseMarkdown(generatedText);
-                    saveDescriptionContainer.classList.remove('hidden');
-                } else {
-                    outputArea.innerHTML = `<p class="text-red-500">AI 無法產生描述。請再試一次。</p>`;
-                    console.error("API 回應中未找到文字部分。");
-                }
-                
-                if (imagePart && imagePart.inlineData && imagePart.inlineData.data) {
-                    const imageUrl = `data:${imagePart.inlineData.mimeType};base64,${imagePart.inlineData.data}`;
-                    const existingImage = document.getElementById('generated-image');
-                    const existingDownloadBtn = document.getElementById('download-btn');
-                    if (existingImage) {
-                        existingImage.src = imageUrl;
-                    } else {
-                        const newImage = document.createElement('img');
-                        newImage.id = 'generated-image';
-                        newImage.src = imageUrl;
-                        newImage.alt = '生成的角色圖片';
-                        newImage.className = 'w-full md:w-3/4 max-w-xl rounded-lg shadow-lg border-2 border-gray-200 mb-4 transition-transform transform hover:scale-105';
-                        imageOutputArea.prepend(newImage);
-                        
-                        const downloadBtn = document.createElement('a');
-                        downloadBtn.id = 'download-btn';
-                        downloadBtn.href = imageUrl;
-                        downloadBtn.download = 'generated_character.png';
-                        downloadBtn.className = 'w-full md:w-auto px-6 py-3 bg-blue-600 text-white font-semibold rounded-full shadow-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-transform transform hover:scale-105';
-                        downloadBtn.textContent = '下載圖片';
-                        imageOutputArea.appendChild(downloadBtn);
-                    }
-                } else {
-                    console.error("API 回應中未找到圖片部分。");
-                    imageOutputArea.innerHTML = `<p class="text-red-500 text-center">很抱歉，AI 暫時無法根據您提供的圖片組合生成圖像。請嘗試重新產生。</p>`;
-                }
-
-            } catch (error) {
-                console.error("角色產生失敗：", error);
-                outputArea.innerHTML = `<p class="text-red-500">角色產生失敗。請檢查您的網路連線或稍後再試。</p>`;
-                const existingImage = document.getElementById('generated-image');
-                if (existingImage) existingImage.src = '';
-            } finally {
-                loadingIndicator.classList.add('hidden');
-                generateBtn.disabled = false;
-                regenerateBtn.classList.remove('hidden'); // 確保重新產生按鈕在完成後顯示
-                regenerateBtn.disabled = false;
-            }
-        };
-
-        generateBtn.addEventListener('click', generateCharacter);
-        regenerateBtn.addEventListener('click', generateCharacter);
-        updateButtonState();
-
+        actionBtn.addEventListener('click', generateCharacter);
+        renderMainPreview();
     </script>
 </body>
 </html>
