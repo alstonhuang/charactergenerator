@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>角色產生器</title>
+
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <!-- 引入 Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- 引入 Inter 字體 -->
@@ -15,6 +17,38 @@
             -moz-osx-font-smoothing: grayscale;
             color: #d1d5db; /* 淺灰色字體，與深色背景搭配 */
             background-color: #111827; /* 深色背景，無圖片 */
+        }
+
+        /* 畫廊容器 */
+        #character-gallery {
+            /* 確保畫廊容器有固定的最大寬度 */
+            max-width: 100vw;            
+
+            display: flex;
+            overflow-x: auto;
+            gap: 16px; /* 增加卡片之間的間距，讓排版更美觀 */
+            padding-bottom: 20px; /* 增加底部空間，避免捲軸遮擋內容 */
+
+            /* 隱藏預設的捲軸，讓介面更乾淨 */
+            scrollbar-width: none; /* For Firefox */
+            -ms-overflow-style: none; /* For Internet Explorer and Edge */
+        }
+
+        /* 隱藏 Webkit (Chrome, Safari) 瀏覽器的捲軸 */
+        #character-gallery::-webkit-scrollbar {
+            display: none;
+        }
+
+        /* 畫廊卡片 */
+        .character-card {
+            flex-shrink: 0; 
+            width: 300px; /* 設定一個固定的寬度 */
+            background-color: #1f2937; /* 深灰背景 */
+            padding: 1rem;
+            border-radius: 1rem; /* 使用較大的圓角 */
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+            overflow: hidden;
+            transition: transform 0.3s ease-in-out;
         }
 
         /* 應用程式主容器樣式 */
@@ -137,11 +171,7 @@
         }
 
         /* 角色畫廊樣式 */
-        #character-gallery {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-            gap: 2rem;
-        }
+        /* 已在前面定義 #character-gallery，請勿重複定義 */
 
         .character-card {
             background-color: #1f2937;
@@ -152,13 +182,8 @@
         }
         .character-card:hover {
             transform: translateY(-5px);
-            box-shadow: 0 10px 15px rgba(0,0,0,0.2);
         }
-        .character-card-img {
-            width: 100%;
-            height: 250px;
-            object-fit: cover;
-        }
+        /* 已合併至上方 .character-card 定義，避免重複 */
         .character-card-content {
             padding: 1rem;
         }
@@ -300,9 +325,10 @@
                 <p id="user-id-display" class="text-sm font-semibold text-gray-500 mt-2 hidden"></p>
             </div>
             
+            <div id="gallery-loading" class="text-center my-4 text-gray-400">正在載入畫廊...</div>
             <!-- 角色畫廊區塊 -->
             <div id="character-gallery" class="mt-8">
-                <p id="gallery-loading" class="text-center text-gray-500">正在載入畫廊...</p>
+                
             </div>
 
             <!-- 贊助區塊 -->
@@ -334,8 +360,15 @@
         // Firebase 相關匯入
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, collection, addDoc, onSnapshot, query, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        //import { getFirestore, collection, addDoc, onSnapshot, query, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, query, orderBy, limit, startAfter, getDocs, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-storage.js";
+
+
+    let lastVisible = null;
+    let isLoading = false;
+    let currentUserId = null;
+
 
 	// 判斷是否在 Canvas 環境中，並設定 Firebase 配置和權杖
 	const isCanvasEnv = typeof __firebase_config !== 'undefined';
@@ -388,6 +421,7 @@
         const randomElementInfo = document.getElementById('random-element-info');
         const galleryContainer = document.getElementById('character-gallery');
         const userIdDisplay = document.getElementById('user-id-display');
+        //const loadingMessage = document.getElementById('gallery-loading');
 
         let mainImage = null;
         let elementImages = [];
@@ -627,45 +661,92 @@
 
                 console.log("角色已成功儲存到資料庫！");
 
+                // 清空畫廊內容，然後重新載入第一頁的角色
+                galleryContainer.innerHTML = '';
+                
+                // 重設 lastVisible 變數，以便從頭開始載入
+                lastVisible = null;
+                
+                // 呼叫 loadCharacters 函式，載入第一頁的新資料
+                loadCharacters();                
+
             } catch (error) {
                 console.error("儲存角色到資料庫時發生錯誤：", error);
             }
         };
 
-        // 新增: 從 Firestore 載入所有角色
-        const loadCharacters = () => {
-            // 修正：從 app 物件中取得 appId
-            //const charactersCol = collection(db, `artifacts/${app.options.appId}/public/data/characters`);
+        // 載入畫廊角色
+        const loadCharacters = async () => {
+            if (isLoading) return;
+            isLoading = true;
+
+            const loadingMessage = document.getElementById('gallery-loading');
+            // 顯示載入訊息 (如果尚未顯示)
+            loadingMessage.style.display = 'block';
+
             const charactersCol = collection(db, `artifacts/${firebaseConfig.appId}/public/data/characters`);
-            const q = query(charactersCol);
+            let q = query(charactersCol, orderBy('createdAt', 'desc'), limit(5));
             
-            const unsubscribe = onSnapshot(q, (snapshot) => {
-                galleryContainer.innerHTML = '';
-                if (snapshot.empty) {
-                    galleryContainer.innerHTML = `<p class="text-center text-gray-500">目前還沒有任何角色，成為第一個創造者吧！</p>`;
+            if (lastVisible) {
+                q = query(charactersCol, orderBy('createdAt', 'desc'), startAfter(lastVisible), limit(5));
+            }
+
+            try {
+                const documentSnapshots = await getDocs(q);
+ 
+                if (documentSnapshots.empty) {
+                    // 沒有更多資料就不要再更新 lastVisible
+                    loadingMessage.style.display = 'none';
+                    isLoading = false;
                     return;
                 }
 
-                snapshot.forEach((doc) => {
-                    const character = doc.data();
+                documentSnapshots.forEach((doc) => {
+                    const characterData = doc.data();
+                    const imageUrl = characterData.fullBodyImageUrl || 'https://via.placeholder.com/300x400?text=圖片遺失';
+                    const characterName = characterData.name || '未知角色';
+                    const descriptionHtml = marked.parse(characterData.description || '無描述', { breaks: true });
+                    const userId = characterData.userId || '未知使用者';
+
                     const card = document.createElement('div');
-                    card.className = 'character-card';
+                    card.className = 'character-card bg-gray-800 p-4 rounded-lg shadow-lg flex-shrink-0 w-80';
                     card.innerHTML = `
-                        <img src="${character.fullBodyImageUrl}" alt="角色圖片" class="character-card-img" />
-                        <div class="character-card-content">
-                            <p class="text-sm font-semibold text-gray-200">${character.description.split('\n')[0]}</p>
-                            <p class="user-id-text mt-1">由 ${character.generatedByUserId.substring(0, 8)}... 創建</p>
+                        <img src="${imageUrl}" alt="${characterName}" class="character-card-img rounded-md mb-4">
+                        
+                        <div class="gallery-description-box h-40 overflow-y-auto pr-2 text-gray-400 text-sm leading-relaxed mb-4">
+                            ${descriptionHtml}
                         </div>
+                        <p class="user-id-text text-gray-500 text-xs mt-2">
+                            由 ${characterData.generatedByUserId.substring(0, 8)}... 創建
+                        </p>
                     `;
                     galleryContainer.appendChild(card);
                 });
-            }, (error) => {
-                console.error("即時監聽資料庫時發生錯誤:", error);
-                galleryContainer.innerHTML = `<p class="text-center text-red-400">載入畫廊時發生錯誤。</p>`;
-            });
 
-            // 在這裡可以選擇返回 unsubscribe 函數，以便在需要時停止監聽
+                // 隱藏載入訊息
+                loadingMessage.style.display = 'none';
+                
+                // 只有有新資料才更新 lastVisible
+                if (documentSnapshots.docs.length > 0) {
+                    lastVisible = documentSnapshots.docs[documentSnapshots.docs.length - 1];
+                }
+                
+            } catch (error) {
+                console.error("讀取畫廊資料時發生錯誤：", error);
+                loadingMessage.style.display = 'none';
+                galleryContainer.innerHTML = `<p class="text-center text-red-400">讀取資料失敗，請稍後再試。</p>`;
+            } finally {
+                isLoading = false;
+            }
         };
+
+        // 監聽畫廊捲動
+        galleryContainer.addEventListener('scroll', () => {
+            const isAtRightEnd = galleryContainer.scrollLeft + galleryContainer.clientWidth >= galleryContainer.scrollWidth - 10;
+            if (isAtRightEnd && !isLoading && lastVisible) {
+                loadCharacters();
+            }
+        });
 
 
         const generateCharacter = async () => {
@@ -729,14 +810,18 @@
         
         **請務必確保以下兩張圖片中的角色外觀、服裝和配色是完全一致的，就像是同一個角色的不同姿勢一樣。**
 
-        1. **角色全身圖**：生成一張 ${selectedStyle} 風格的角色全身圖像。圖片必須是單獨一個角色，擺出靜態的、展示服裝細節的姿勢，且背景簡潔。
+        1. **角色全身圖**：生成一張 ${selectedStyle} 風格的角色全身圖像。圖片必須是單獨一個角色，擺出靜態的、展示服裝細節的姿勢，且背景簡潔。禁止任何動態技能效果。
         
-        2. **施展技能圖**：生成一張 ${selectedStyle} 風格的圖像，描繪角色正在施展其「特技」時的動態場景。這張圖必須包含技能的視覺效果，例如閃電、火焰、魔法光芒或強風，以突顯其動作。圖片必須是單獨一個角色，且背景簡潔。
-        
-        **絕對禁止在生成的圖像中包含任何文字、字母或符號。**
-        
+        2. **施展技能圖**：生成一張 ${selectedStyle} 風格的圖像，描繪角色正在施展其「特技」時的動態場景。這張圖必須包含技能的視覺效果，例如閃電、火焰、魔法光芒或強風，以突顯其動作。圖片必須是單獨一個角色，且背景簡潔，並且與角色全身圖在姿勢與畫面構圖上需明顯不同。
+
+        **圖像產出規則：**
+        - 圖片必須為 1:1 方形比例。
+        - 兩張圖必須進行差異性檢查：若角色全身圖與施展技能圖過於相似（超過 85% 相似度），必須重新生成，直到兩張圖符合規則為止。
+        - 絕對禁止在生成的圖像中包含任何文字、字母或符號。
+
         請注意：我將在一個畫廊應用程式中使用你提供的圖片。請務必生成完整的、引人注目的圖像。`;
 
+        console.log("生成角色的提示語：", promptText);
 
 	    // 修正後的程式碼：
 	    const parts = [];
@@ -1011,6 +1096,62 @@
 
         actionBtn.addEventListener('click', generateCharacter);
         renderMainPreview();
+
+        // 在你的程式碼中，新增這個事件監聽器
+        window.addEventListener('scroll', () => {
+            // 判斷用戶是否捲動到底部
+            if ((window.innerHeight + window.scrollY) >= document.body.offsetHeight) {
+                // 如果還有更多文檔，則載入
+                if (lastVisible) {
+                    loadCharacters();
+                }
+            }
+        });
+
+        const gallery = document.getElementById('character-gallery');
+        let isDown = false;
+        let startX;
+        let scrollLeft;
+
+        gallery.addEventListener('mousedown', (e) => {
+            isDown = true;
+            startX = e.pageX - gallery.offsetLeft;
+            scrollLeft = gallery.scrollLeft;
+        });
+        gallery.addEventListener('mouseleave', () => isDown = false);
+        gallery.addEventListener('mouseup', () => isDown = false);
+        gallery.addEventListener('mousemove', (e) => {
+        if (!isDown) return;
+        e.preventDefault();
+        const x = e.pageX - gallery.offsetLeft;
+        const walk = (x - startX) * 2; // 調整拖曳速度
+            gallery.scrollLeft = scrollLeft - walk;
+        });        
+
+        // 分享圖片到剪貼簿或 Web Share API
+        function shareImage(button, imageData, mimeType, title, description) {
+            if (navigator.share && navigator.canShare && navigator.canShare({ files: [new File([Uint8Array.from(atob(imageData), c => c.charCodeAt(0))], title + '.png', { type: mimeType })] })) {
+                // 使用 Web Share API 分享圖片
+                const file = new File([Uint8Array.from(atob(imageData), c => c.charCodeAt(0))], title + '.png', { type: mimeType });
+                navigator.share({
+                    title: title,
+                    text: description,
+                    files: [file]
+                }).catch(() => {});
+            } else {
+                // 複製圖片連結到剪貼簿
+                const imageUrl = `data:${mimeType};base64,${imageData}`;
+                navigator.clipboard.writeText(imageUrl).then(() => {
+                    const shareMessage = button.parentElement.parentElement.querySelector('.share-message');
+                    if (shareMessage) {
+                        shareMessage.textContent = '圖片連結已複製到剪貼簿！';
+                        shareMessage.classList.remove('hidden');
+                        setTimeout(() => shareMessage.classList.add('hidden'), 2000);
+                    }
+                });
+            }
+        }
+
     </script>
 </body>
 </html>
